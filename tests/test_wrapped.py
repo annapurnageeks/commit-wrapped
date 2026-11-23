@@ -83,6 +83,10 @@ class WrappedTest(unittest.TestCase):
         self.assertEqual(f["peak_hour_label"], "11 PM")
         self.assertEqual(f["peak_weekday"], "Monday")
 
+    def test_reads_utc_times_written_as_z(self):
+        repo = make_repo(self.root / "r", [("2025-05-05T10:00:00Z", "Ada", "utc", {"a.py": "x\n"})])
+        self.assertEqual(self.facts_for(repo)["peak_hour"], 10)
+
     def test_streaks_and_breaks(self):
         days = ["01", "02", "03", "10", "11"]
         repo = make_repo(self.root / "r", [(f"2025-06-{d}T12:00:00+00:00", "Ada", f"day {d}", {f"{d}.py": "x\n"})

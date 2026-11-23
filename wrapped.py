@@ -149,6 +149,7 @@ def read_commits(repo, year, all_branches=False):
     for line in result.stdout.split("\n"):  # not splitlines(): it also splits on \x1e
         if line.startswith("\x1e"):  # a new commit starts: hash, time, author, email, message
             full_hash, when, name, email, subject = line[1:].split("\x1f", 4)
+            when = when.replace("Z", "+00:00")    # newer git writes UTC as "Z"; Python < 3.11 can't read it
             commits.append({"hash": full_hash, "when": datetime.fromisoformat(when), "name": name,
                             "email": email, "subject": subject.strip(), "repo": repo.name, "files": []})
         elif line and commits:       # one changed file: "added<TAB>deleted<TAB>path"
