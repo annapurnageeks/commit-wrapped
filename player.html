@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wrapped</title>
+<style>
+  :root {
+    --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --a: #1e0b3a; --b: #5b21b6; --c: #db2777;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #07060d; color: #fff; font-family: var(--font); overflow: hidden;
+               -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+
+  /* The page behind the phone-shaped story: a blurred copy of the current colors. */
+  #backdrop { position: fixed; inset: -10%; background: radial-gradient(60% 50% at 30% 30%, var(--b), transparent),
+              radial-gradient(60% 50% at 70% 70%, var(--c), transparent), var(--a);
+              filter: blur(60px) saturate(1.2); opacity: .55; transition: background 1s; }
+
+  #stage { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+           width: min(100vw, calc(100vh * 9 / 16)); height: min(100vh, calc(100vw * 16 / 9));
+           overflow: hidden; border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,.55);
+           background: var(--a); container-type: size; }
+  @media (max-width: 600px) { #stage { border-radius: 0; } }
+
+  /* Moving blobs of color give every slide a slow, living background. */
+  .bg { position: absolute; inset: 0; background: linear-gradient(160deg, var(--a) 0%, var(--b) 55%, var(--c) 120%);
+        transition: background 0.8s; }
+  .blob { position: absolute; width: 90cqw; height: 90cqw; border-radius: 50%; filter: blur(14cqw); opacity: .55; }
+  .blob.one { background: var(--c); top: -30cqw; right: -35cqw; animation: drift 14s ease-in-out infinite alternate; }
+  .blob.two { background: var(--b); bottom: -35cqw; left: -30cqw; animation: drift 17s ease-in-out infinite alternate-reverse; }
+  @keyframes drift { to { transform: translate(-18cqw, 22cqw) scale(1.25); } }
+  .grain { position: absolute; inset: 0; opacity: .08; mix-blend-mode: overlay; pointer-events: none;
+           background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+  #bars { position: absolute; top: 2.4cqh; left: 4cqw; right: 4cqw; display: flex; gap: 1.2cqw; z-index: 5; }
+  #bars div { flex: 1; height: 0.45cqh; min-height: 3px; background: rgba(255,255,255,.28); border-radius: 9px; overflow: hidden; }
+  #bars span { display: block; height: 100%; width: 0; background: #fff; }
+  #brand { position: absolute; top: 4.4cqh; left: 4cqw; right: 4cqw; z-index: 5; display: flex; justify-content: space-between;
+           font-size: 3.1cqw; font-weight: 700; letter-spacing: .02em; opacity: .85; }
+  #brand b { font-weight: 800; }
+  #hint { position: absolute; bottom: 2.2cqh; left: 0; right: 0; text-align: center; font-size: 2.8cqw; opacity: .55; z-index: 5; }
+  .clean #bars, .clean #brand, .clean #hint, .clean .actions { visibility: hidden; }
+
+  #slide { position: absolute; inset: 0; padding: 14cqh 8cqw 9cqh; display: flex; flex-direction: column;
+           justify-content: center; z-index: 2; }
+  .kicker { font-size: 4.6cqw; font-weight: 700; opacity: .85; margin-bottom: 2cqh; }
+  .huge { font-size: 26cqw; font-weight: 900; line-height: .9; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+  .big { font-size: 11cqw; font-weight: 900; line-height: 1; letter-spacing: -.03em; }
+  .unit { font-size: 8cqw; font-weight: 800; margin-top: 1cqh; }
+  .caption { font-size: 5.2cqw; font-weight: 650; line-height: 1.3; margin-top: 4cqh; max-width: 92%; text-wrap: balance; }
+  .small { font-size: 3.6cqw; opacity: .8; }
+  .mono { font-family: var(--mono); }
+  .quote { font-size: 6.2cqw; font-weight: 750; line-height: 1.25; overflow-wrap: anywhere; }
+
+  /* Things rise into view one after another; --d is each one's delay. */
+  .rise { opacity: 0; transform: translateY(5cqh); animation: rise .8s cubic-bezier(.2,.8,.2,1) forwards; animation-delay: var(--d, 0s); }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  .pop { opacity: 0; transform: scale(.3) rotate(-20deg); animation: pop .9s cubic-bezier(.3,1.6,.5,1) forwards; animation-delay: var(--d, 0s); }
+  @keyframes pop { to { opacity: 1; transform: none; } }
+  .paused .rise, .paused .pop, .paused .blob { animation-play-state: paused; }
+
+  .wordmark { font-size: 17cqw; font-weight: 900; letter-spacing: -.05em; line-height: .85;
+              background: linear-gradient(90deg, #fff, #ffe3f1, #fff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  .split { display: flex; height: 3.2cqh; border-radius: 99px; overflow: hidden; margin-top: 4cqh; background: rgba(0,0,0,.2); }
+  .split i { display: block; height: 100%; width: 0; transition: width 1.6s cubic-bezier(.2,.8,.2,1) .6s; }
+  .plus { color: #bef264; } .minus { color: #fda4af; }
+
+  .columns { display: flex; align-items: flex-end; gap: 1.6cqw; height: 34cqh; margin-top: 3cqh; }
+  .columns .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 1cqh; }
+  .columns .fill { width: 100%; height: 0; background: rgba(255,255,255,.35); border-radius: 1.4cqw 1.4cqw .5cqw .5cqw;
+                   transition: height 1.2s cubic-bezier(.2,.8,.2,1); }
+  .columns .peak .fill { background: #fff; box-shadow: 0 0 4cqw rgba(255,255,255,.5); }
+  .columns .lbl { font-size: 2.9cqw; font-weight: 700; opacity: .8; }
+
+  .rows { display: flex; flex-direction: column; gap: 1.6cqh; margin-top: 3cqh; }
+  .row { display: grid; grid-template-columns: 22cqw 1fr auto; align-items: center; gap: 3cqw; font-size: 4.2cqw; font-weight: 700; }
+  .row .track { height: 3cqh; background: rgba(0,0,0,.18); border-radius: 99px; overflow: hidden; }
+  .row .fill { height: 100%; width: 0; border-radius: 99px; background: rgba(255,255,255,.45); transition: width 1.3s cubic-bezier(.2,.8,.2,1); }
+  .row.peak .fill { background: #fff; }
+  .row .n { font-variant-numeric: tabular-nums; opacity: .9; min-width: 9cqw; text-align: right; }
+
+  .lang { display: grid; grid-template-columns: 7cqw 1fr auto; align-items: center; gap: 3cqw; }
+  .lang .rank { font-size: 6cqw; font-weight: 900; opacity: .6; }
+  .lang .name { font-size: 6cqw; font-weight: 850; }
+  .lang .pct { font-size: 4.6cqw; font-weight: 700; opacity: .85; }
+  .lang .track { grid-column: 2 / 4; height: 1.4cqh; border-radius: 99px; background: rgba(0,0,0,.2); overflow: hidden; margin-top: -0.6cqh; }
+  .lang .fill { height: 100%; width: 0; transition: width 1.4s cubic-bezier(.2,.8,.2,1); }
+
+  .months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.2cqh 3cqw; margin-top: 3cqh; }
+  .month b { display: block; font-size: 2.8cqw; margin-bottom: .8cqh; opacity: .85; }
+  .month .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .45cqw; }
+  .month .grid i { aspect-ratio: 1; border-radius: .5cqw; background: rgba(255,255,255,.1); opacity: 0;
+                   animation: rise .5s forwards; }
+  .month .grid i.blank { visibility: hidden; }
+
+  .clock { width: 70cqw; height: 70cqw; margin: 2cqh auto 0; display: block; overflow: visible; }
+  .clock path { stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1); }
+  .clock text { fill: #fff; font: 700 11px var(--font); opacity: .7; text-anchor: middle; dominant-baseline: middle; }
+
+  .emoji { font-size: 34cqw; line-height: 1; margin-bottom: 3cqh; }
+  .chips { display: flex; flex-wrap: wrap; gap: 1.6cqw; margin-top: 3cqh; }
+  .chip { padding: 1cqh 3cqw; border-radius: 99px; background: rgba(255,255,255,.16); font-size: 3.8cqw; font-weight: 700; }
+
+  .card { width: 72cqw; margin: 0 auto; border-radius: 3cqw; box-shadow: 0 3cqh 8cqh rgba(0,0,0,.5); display: block; }
+  .actions { display: flex; gap: 2cqw; justify-content: center; margin-top: 3cqh; flex-wrap: wrap; position: relative; z-index: 6; }
+  .actions button, .actions a { font: 800 3.6cqw var(--font); color: #111; background: #fff; border: 0; border-radius: 99px;
+                                padding: 1.4cqh 4.4cqw; cursor: pointer; text-decoration: none; }
+  .actions .ghost { background: rgba(255,255,255,.18); color: #fff; }
+  #toast { position: absolute; left: 50%; bottom: 7cqh; transform: translateX(-50%); background: #fff; color: #111; z-index: 9;
+           font-weight: 800; font-size: 3.6cqw; padding: 1.2cqh 4cqw; border-radius: 99px; opacity: 0; transition: opacity .3s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .rise, .pop, .month .grid i { animation-duration: .01s !important; animation-delay: 0s !important; }
+    .blob { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div id="backdrop"></div>
+<main id="stage" aria-live="polite">
+  <div class="bg"></div><div class="blob one"></div><div class="blob two"></div><div class="grain"></div>
+  <div id="bars"></div>
+  <div id="brand"><span><b>commit-wrapped</b></span><span id="who"></span></div>
+  <section id="slide"></section>
+  <div id="hint">tap → next · ← back · hold to pause</div>
+  <div id="toast"></div>
+</main>
+
+<script>
+const F = /*__FACTS__*/null;
+
+// ------------------------------------------------------------------------------------------
+// Little helpers
+// ------------------------------------------------------------------------------------------
+const $ = (s) => document.querySelector(s);
+const fmt = (n) => Number(n).toLocaleString("en-US");
+const you = F.everyone ? F.name : "You";
+const your = F.everyone ? `${F.name}'s` : "Your";
+
+// Make an element. Text always goes in as text, never as HTML, so commit messages can't break the page.
+function h(tag, cls, text, delay) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (text !== undefined && text !== null) el.textContent = text;
+  if (delay !== undefined) el.style.setProperty("--d", delay + "s");
+  return el;
+}
+
+// Count a number up from zero, easing out.
+function countUp(el, to, ms = 1500, delay = 0, suffix = "") {
+  el.textContent = "0" + suffix;
+  const start = performance.now() + delay * 1000;
+  function frame(now) {
+    const t = Math.min(Math.max((now - start) / ms, 0), 1);
+    el.textContent = fmt(Math.round(to * (1 - Math.pow(1 - t, 3)))) + suffix;
+    if (t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  return el;
+}
+
+// Run something after the slide is on screen (so CSS transitions animate from their start).
+const later = (fn, ms = 60) => setTimeout(fn, ms);
+const caption = (key, delay = 1.2) => h("p", "caption rise", F.captions[key], delay);
+const niceDate = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric" });
+
+// ------------------------------------------------------------------------------------------
+// The slides. Each one has colors (a, b, c) and a function that fills the slide.
+// ------------------------------------------------------------------------------------------
+const SLIDES = [
+  { key: "intro", colors: ["#1e0b3a", "#6d28d9", "#ec4899"], draw(s) {
+      s.append(h("p", "kicker rise", F.everyone ? F.name : `Hey ${F.name.split(" ")[0]},`, 0.1),
+               h("div", "wordmark rise", String(F.year), 0.35),
+               h("div", "big rise", "Wrapped", 0.6), caption("intro", 1.1));
+  }},
+  { key: "commits", colors: ["#0b1026", "#1d4ed8", "#06b6d4"], draw(s) {
+      s.append(h("p", "kicker rise", F.everyone ? `This year, ${F.name} got` : "This year you made", 0.1));
+      const n = h("div", "huge rise", "0", 0.25); countUp(n, F.commits, 1800, 0.3); s.append(n);
+      s.append(h("div", "unit rise", F.commits === 1 ? "commit" : "commits", 0.5), caption("commits"));
+  }},
+  { key: "people", only: () => F.everyone, colors: ["#1a0b2e", "#7e22ce", "#f472b6"], draw(s) {
+      const n = h("div", "huge rise", "0", 0.1); countUp(n, F.people, 1600, 0.2); s.append(n);
+      s.append(h("div", "unit rise", F.people === 1 ? "contributor" : "contributors", 0.4), caption("people", 0.8));
+      const rows = h("div", "rows"); const max = F.top_people[0].commits;
+      F.top_people.forEach((p, i) => {
+        const r = h("div", "row rise" + (i === 0 ? " peak" : ""), null, 1.2 + i * .12);
+        const t = h("div", "track"), fill = h("div", "fill"); t.append(fill);
+        r.append(h("span", null, p.name), t, h("span", "n", fmt(p.commits)));
+        rows.append(r); later(() => fill.style.width = (100 * p.commits / max) + "%", 1300 + i * 120);
+      });
+      rows.querySelectorAll(".row").forEach(r => r.style.gridTemplateColumns = "34cqw 1fr auto");
+      s.append(rows);
+  }},
+  { key: "lines", colors: ["#03170c", "#15803d", "#a3e635"], draw(s) {
+      s.append(h("p", "kicker rise", "Lines of code", 0.1),
+               signed("+", F.added, "plus", 0.25), h("p", "small rise", "added", 0.4),
+               signed("−", F.removed, "minus", 0.55), h("p", "small rise", "removed", 0.7));
+      const bar = h("div", "split rise", null, 0.8), a = h("i"), b = h("i");
+      a.style.background = "#bef264"; b.style.background = "#fda4af"; bar.append(a, b); s.append(bar);
+      const total = Math.max(F.added + F.removed, 1);
+      later(() => { a.style.width = (100 * F.added / total) + "%"; b.style.width = (100 * F.removed / total) + "%"; });
+      s.append(caption("lines", 1.4));
+  }},
+  { key: "months", colors: ["#2a0845", "#9333ea", "#f472b6"], draw(s) {
+      s.append(h("p", "kicker rise", "Month by month", 0.1), h("div", "big rise", F.peak_month, 0.25));
+      s.append(columns(F.by_month, "JFMAMJJASOND".split("")), caption("months", 1.4));
+  }},
+  { key: "hours", colors: ["#020617", "#1e1b4b", "#6366f1"], draw(s) {
+      s.append(h("p", "kicker rise", F.everyone ? "Peak hour" : "Your peak hour", 0.1), h("div", "big rise", F.peak_hour_label, 0.25));
+      s.append(clock(F.by_hour, F.peak_hour), caption("hours", 1.6));
+  }},
+  { key: "weekdays", colors: ["#2a0e04", "#ea580c", "#facc15"], draw(s) {
+      s.append(h("p", "kicker rise", "Day of the week", 0.1), h("div", "big rise", F.peak_weekday, 0.25));
+      const rows = h("div", "rows"), max = Math.max(...F.by_weekday, 1);
+      ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].forEach((d, i) => {
+        const peak = F.by_weekday[i] === max;
+        const r = h("div", "row rise" + (peak ? " peak" : ""), null, 0.5 + i * .08);
+        const t = h("div", "track"), fill = h("div", "fill"); t.append(fill);
+        r.append(h("span", null, d), t, h("span", "n", fmt(F.by_weekday[i])));
+        rows.append(r); later(() => fill.style.width = (100 * F.by_weekday[i] / max) + "%", 700 + i * 80);
+      });
+      s.append(rows, caption("weekdays", 1.4));
+  }},
+  { key: "streak", colors: ["#2b0505", "#dc2626", "#fb923c"], draw(s) {
+      s.append(h("div", "emoji pop", "🔥", 0.1), h("p", "kicker rise", "Longest streak", 0.3));
+      const n = h("div", "huge rise", "0", 0.4); countUp(n, F.streak.days, 1300, 0.5); s.append(n);
+      s.append(h("div", "unit rise", F.streak.days === 1 ? "day" : "days in a row", 0.6));
+      if (F.streak.days > 1) s.append(h("p", "small rise", `${niceDate(F.streak.start)} → ${niceDate(F.streak.end)}`, 0.8));
+      s.append(caption("streak", 1.3));
+  }},
+  { key: "calendar", colors: ["#021a16", "#0f766e", "#2dd4bf"], draw(s) {
+      s.append(h("p", "kicker rise", "Every day of the year", 0.1));
+      const n = h("div", "big rise", null, 0.2); n.textContent = `${fmt(F.active_days)} active days`; s.append(n);
+      s.append(calendar(), caption("calendar", 1.8));
+  }},
+  { key: "languages", colors: ["#12093a", "#7c3aed", "#f0abfc"], draw(s) {
+      s.append(h("p", "kicker rise", F.everyone ? "Top languages" : "Your top languages", 0.1));
+      const list = h("div", "rows");
+      F.languages.slice(0, 5).forEach((l, i) => {
+        const row = h("div", "lang rise", null, 0.3 + i * .15);
+        const t = h("div", "track"), fill = h("div", "fill"); fill.style.background = l.color; t.append(fill);
+        row.append(h("span", "rank", i + 1), h("span", "name", l.name), h("span", "pct", Math.round(l.share * 100) + "%"), t);
+        list.append(row); later(() => fill.style.width = Math.max(l.share * 100, 2) + "%", 500 + i * 150);
+      });
+      s.append(list, caption("languages", 1.4));
+  }},
+  { key: "files", only: () => F.top_file, colors: ["#04223a", "#0284c7", "#7dd3fc"], draw(s) {
+      s.append(h("p", "kicker rise", F.everyone ? "The most-edited file" : "The file you couldn't leave alone", 0.1));
+      s.append(h("div", "quote mono rise", F.top_file.path, 0.3));
+      s.append(h("p", "small rise", `${F.top_file.repo} · changed in ${fmt(F.top_file.commits)} commits`, 0.5));
+      if (F.repos.length > 1) {
+        s.append(h("p", "kicker rise", F.everyone ? "Top repos" : "Your top repos", 0.9));
+        const rows = h("div", "rows"), max = F.repos[0].commits;
+        F.repos.slice(0, 4).forEach((r, i) => {
+          const row = h("div", "row rise" + (i === 0 ? " peak" : ""), null, 1 + i * .1);
+          row.style.gridTemplateColumns = "38cqw 1fr auto";
+          const t = h("div", "track"), fill = h("div", "fill"); t.append(fill);
+          const name = h("span", "mono", r.name); name.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:3.6cqw";
+          row.append(name, t, h("span", "n", fmt(r.commits)));
+          rows.append(row); later(() => fill.style.width = (100 * r.commits / max) + "%", 1100 + i * 100);
+        });
+        s.append(rows);
+      } else s.append(caption("files"));
+  }},
+  { key: "biggest", colors: ["#2e0331", "#c026d3", "#fb7185"], draw(s) {
+      const b = F.biggest_commit;
+      s.append(h("p", "kicker rise", "Biggest commit", 0.1));
+      s.append(signed("+", b.added, "plus", 0.25), signed("−", b.removed, "minus", 0.45));
+      if (b.message) { s.append(h("p", "quote rise", `“${b.message}”`, 0.9)); s.lastChild.style.marginTop = "3cqh"; }
+      s.append(h("p", "small rise", [b.repo, niceDate(b.date)].filter(Boolean).join(" · "), 1.1), caption("biggest", 1.4));
+  }},
+  { key: "messages", colors: ["#1a1208", "#b45309", "#fde68a"], draw(s) {
+      const m = F.messages;
+      if (m.favourite_word) s.append(h("p", "kicker rise", F.everyone ? "Favourite word in commit messages" : "Your favourite word", 0.1),
+                                     h("div", "big rise", `“${m.favourite_word}”`, 0.3));
+      else s.append(h("p", "kicker rise", F.everyone ? "Commit messages" : "Your commit messages", 0.1));
+      s.append(caption("messages", 0.7));
+      const chips = h("div", "chips");
+      chips.append(h("span", "chip rise", `🧯 ${fmt(m.fixes)} ${m.fixes === 1 ? "fix" : "fixes"}`, 1.1), h("span", "chip rise", `✍️ ${m.average_length} chars on average`, 1.2));
+      if (F.night_commits) chips.append(h("span", "chip rise", `🌙 ${fmt(F.night_commits)} after 10 PM`, 1.3));
+      s.append(chips);
+      if (m.shortest) { const k = h("p", "kicker rise", "Shortest message", 1.6); k.style.marginTop = "4cqh"; s.append(k, h("div", "quote mono rise", `“${m.shortest}”`, 1.7)); }
+  }},
+  { key: "personality", colors: ["#1e1b4b", "#be185d", "#f59e0b"], duration: 8000, draw(s) {
+      const p = F.personality;
+      s.append(h("p", "kicker rise", F.everyone ? `${F.name}'s coding personality` : "Your coding personality", 0.1),
+               h("div", "emoji pop", p.emoji, 0.5), h("div", "big rise", p.title, 1.0), caption("personality", 1.5));
+  }},
+  { key: "outro", colors: ["#0f0a1f", "#4c1d95", "#ec4899"], duration: Infinity, draw(s) {
+      s.style.paddingTop = "10cqh";
+      const img = h("img", "card rise", null, 0.1); img.alt = `${your} ${F.year} Wrapped card`;
+      const canvas = drawCard(); img.src = canvas.toDataURL("image/png"); s.append(img);
+      const actions = h("div", "actions rise", null, 0.5);
+      const save = h("button", null, "⬇ Save image"); save.onclick = (e) => { e.stopPropagation(); download(canvas); };
+      const copy = h("button", "ghost", "Copy text"); copy.onclick = (e) => { e.stopPropagation(); copyText(); };
+      const post = h("a", "ghost", "Post on X"); post.href = "https://x.com/intent/post?text=" + encodeURIComponent(shareText());
+      post.target = "_blank"; post.rel = "noopener"; post.onclick = (e) => e.stopPropagation();
+      const again = h("button", "ghost", "↺ Replay"); again.onclick = (e) => { e.stopPropagation(); go(0); };
+      actions.append(save, copy, post, again); s.append(actions);
+  }},
+];
+
+// A big "+1,234" or "−567" that counts up.
+function signed(sign, value, cls, delay) {
+  const row = h("div", `big ${cls} rise`, sign, delay), n = h("span");
+  countUp(n, value, 1600, delay + 0.05); row.append(n);
+  return row;
+}
+
+function columns(values, labels) {
+  const wrap = h("div", "columns"), max = Math.max(...values, 1);
+  values.forEach((v, i) => {
+    const col = h("div", "col rise" + (v === max ? " peak" : ""), null, 0.4 + i * .04), fill = h("div", "fill");
+    col.append(fill, h("span", "lbl", labels[i])); wrap.append(col);
+    later(() => fill.style.height = Math.max(100 * v / max, v ? 3 : 0.5) + "%", 500 + i * 50);
+  });
+  return wrap;
+}
+
+// A 24-hour clock: one spoke per hour, as long as that hour was busy.
+function clock(values, peak) {
+  const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 300 300"); svg.setAttribute("class", "clock rise"); svg.style.setProperty("--d", "0.4s");
+  const max = Math.max(...values, 1), inner = 52, reach = 88;
+  values.forEach((v, i) => {
+    const angle = (i / 24) * Math.PI * 2 - Math.PI / 2, r2 = inner + 6 + reach * v / max;
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", `M ${150 + inner * Math.cos(angle)} ${150 + inner * Math.sin(angle)} L ${150 + r2 * Math.cos(angle)} ${150 + r2 * Math.sin(angle)}`);
+    p.setAttribute("pathLength", "1"); p.setAttribute("stroke", i === peak ? "#fff" : "rgba(255,255,255,.42)");
+    p.setAttribute("stroke-width", i === peak ? "11" : "8"); p.style.transitionDelay = (0.5 + i * 0.03) + "s";
+    svg.append(p); later(() => p.style.strokeDashoffset = "0");
+  });
+  [["12 AM", 0], ["6 AM", 6], ["12 PM", 12], ["6 PM", 18]].forEach(([t, i]) => {
+    const angle = (i / 24) * Math.PI * 2 - Math.PI / 2, text = document.createElementNS(NS, "text");
+    text.setAttribute("x", 150 + 34 * Math.cos(angle)); text.setAttribute("y", 150 + 34 * Math.sin(angle) * 1.05);
+    text.textContent = t.replace(" ", ""); text.style.fontSize = "9px"; svg.append(text);
+  });
+  const glyph = document.createElementNS(NS, "text"); glyph.setAttribute("x", 150); glyph.setAttribute("y", 152);
+  glyph.textContent = (peak >= 22 || peak < 5) ? "🌙" : (peak < 12 ? "☀️" : "🌤️"); glyph.style.cssText = "font-size:22px;opacity:1";
+  svg.append(glyph);
+  return svg;
+}
+
+// Twelve little month calendars, each day colored by how busy it was.
+function calendar() {
+  const wrap = h("div", "months"), counts = Object.values(F.by_day).sort((a, b) => a - b);
+  const q = (p) => counts[Math.floor(p * (counts.length - 1))] || 1;
+  const steps = [q(.25), q(.5), q(.75)];
+  const shades = ["rgba(255,255,255,.1)", "rgba(153,246,228,.45)", "rgba(94,234,212,.7)", "#5eead4", "#ffffff"];
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  months.forEach((name, m) => {
+    const box = h("div", "month rise", null, 0.3 + m * .05), grid = h("div", "grid");
+    box.append(h("b", null, name), grid);
+    const first = new Date(F.year, m, 1), days = new Date(F.year, m + 1, 0).getDate();
+    for (let i = 0; i < (first.getDay() + 6) % 7; i++) grid.append(h("i", "blank"));
+    for (let d = 1; d <= days; d++) {
+      const iso = `${F.year}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`, n = F.by_day[iso] || 0;
+      const level = n === 0 ? 0 : n <= steps[0] ? 1 : n <= steps[1] ? 2 : n <= steps[2] ? 3 : 4;
+      const cell = h("i"); cell.style.background = shades[level]; cell.style.animationDelay = (0.4 + m * .06 + d * .012) + "s";
+      if (n) cell.title = `${iso}: ${n} commits`;
+      grid.append(cell);
+    }
+    wrap.append(box);
+  });
+  return wrap;
+}
+
+// ------------------------------------------------------------------------------------------
+// The shareable card: drawn on a canvas so it can be saved as a PNG (1080 × 1920, story-sized).
+// ------------------------------------------------------------------------------------------
+function drawCard() {
+  const W = 1080, H = 1920, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d"), font = getComputedStyle(document.body).fontFamily;
+  const set = (size, weight = 800) => g.font = `${weight} ${size}px ${font}`;
+  const fit = (text, max, size, weight) => { set(size, weight); while (g.measureText(text).width > max && size > 20) set(--size, weight); return size; };
+
+  let bg = g.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#160a33"); bg.addColorStop(.5, "#5b21b6"); bg.addColorStop(1, "#db2777");
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  [[900, 200, "#f472b6"], [120, 1500, "#6366f1"], [1000, 1700, "#f59e0b"]].forEach(([x, y, col]) => {
+    const r = g.createRadialGradient(x, y, 0, x, y, 650); r.addColorStop(0, col + "88"); r.addColorStop(1, col + "00");
+    g.fillStyle = r; g.fillRect(0, 0, W, H);
+  });
+
+  const panel = (x, y, w, hgt, alpha = .14) => { g.fillStyle = `rgba(255,255,255,${alpha})`; g.beginPath(); g.roundRect(x, y, w, hgt, 36); g.fill(); g.fillStyle = "#fff"; };
+  g.fillStyle = "#fff"; g.textBaseline = "alphabetic";
+
+  set(34, 800); g.globalAlpha = .85; g.fillText("COMMIT-WRAPPED", 80, 130); g.globalAlpha = 1;
+  fit(F.name, 920, 76, 800); g.fillText(F.name, 80, 250);
+  set(150, 900); g.fillText(String(F.year), 80, 400);
+  set(64, 800); g.globalAlpha = .9; g.fillText("in code", 80, 480); g.globalAlpha = 1;
+
+  // personality
+  const p = F.personality;
+  panel(60, 540, 960, 280, .16);
+  set(150, 400); g.fillText(p.emoji, 95, 735);
+  set(36, 700); g.globalAlpha = .8; g.fillText("Coding personality", 300, 630); g.globalAlpha = 1;
+  fit(p.title, 690, 72, 900); g.fillText(p.title, 300, 715);
+  set(30, 600); g.globalAlpha = .85; wrapText(g, p.reason, 300, 770, 690, 38, 2); g.globalAlpha = 1;
+
+  // stats grid
+  const topLang = F.top_language || "—";
+  const stats = [
+    [fmt(F.commits), "commits"],
+    ["+" + fmt(F.added), "lines added"],
+    F.everyone ? [fmt(F.people), "contributors"] : [fmt(F.active_days), "active days"],
+    [fmt(F.streak.days), "day streak"],
+    [F.peak_hour_label, "peak hour"],
+    [topLang, "top language"],
+  ];
+  stats.forEach(([value, label], i) => {
+    const x = 60 + (i % 2) * 490, y = 860 + Math.floor(i / 2) * 215;
+    panel(x, y, 470, 195);
+    g.fillStyle = "#fff"; fit(value, 410, 86, 900); g.fillText(value, x + 32, y + 112);
+    set(32, 700); g.globalAlpha = .8; g.fillText(label, x + 32, y + 162); g.globalAlpha = 1;
+  });
+
+  // languages strip
+  set(34, 800); g.fillText("Languages", 80, 1550);
+  let x = 80; const barW = 920;
+  g.save(); g.beginPath(); g.roundRect(80, 1575, barW, 40, 20); g.clip();
+  g.fillStyle = "rgba(0,0,0,.25)"; g.fillRect(80, 1575, barW, 40);
+  F.languages.forEach(l => { g.fillStyle = l.color; const w = barW * l.share; g.fillRect(x, 1575, w, 40); x += w; });
+  g.restore();
+  x = 80; set(30, 700);
+  F.languages.slice(0, 3).forEach(l => {
+    g.fillStyle = l.color; g.beginPath(); g.arc(x + 12, 1665, 12, 0, Math.PI * 2); g.fill();
+    g.fillStyle = "#fff"; const t = `${l.name} ${Math.round(l.share * 100)}%`; g.fillText(t, x + 34, 1676); x += g.measureText(t).width + 80;
+  });
+
+  // months
+  const max = Math.max(...F.by_month, 1);
+  F.by_month.forEach((v, i) => {
+    const bh = 120 * v / max, bx = 80 + i * 77;
+    g.fillStyle = v === max ? "#fff" : "rgba(255,255,255,.4)"; g.beginPath(); g.roundRect(bx, 1830 - bh - 30, 56, Math.max(bh, 4), 10); g.fill();
+  });
+  set(26, 700); g.globalAlpha = .75; g.textAlign = "right";
+  g.fillText(F.project_url.replace("https://", ""), 1000, 1880); g.textAlign = "left"; g.globalAlpha = 1;
+  return c;
+}
+
+function wrapText(g, text, x, y, max, line, maxLines) {
+  const words = String(text).split(" "); let row = "", n = 0;
+  for (const w of words) {
+    const test = row ? row + " " + w : w;
+    if (g.measureText(test).width > max && row) {
+      if (++n === maxLines) { g.fillText(row + "…", x, y); return; }
+      g.fillText(row, x, y); row = w; y += line;
+    } else row = test;
+  }
+  g.fillText(row, x, y);
+}
+
+function shareText() {
+  const lang = F.top_language ? ` Mostly ${F.top_language}.` : "";
+  const who = F.everyone ? `${F.name}'s ${F.year} in code` : `My ${F.year} in code`;
+  return `${who}: ${fmt(F.commits)} commits, +${fmt(F.added)} lines, a ${F.streak.days}-day streak.${lang} ` +
+         `${F.everyone ? "Personality" : "I'm"}: ${F.personality.title} ${F.personality.emoji}\n\nMake yours: ${F.project_url}`;
+}
+
+function download(canvas) {
+  canvas.toBlob((blob) => {
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = `wrapped-${F.year}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast("Saved! Share it anywhere.");
+  });
+}
+
+function copyText() {
+  const text = shareText();
+  (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject())
+    .then(() => toast("Copied!"), () => { prompt("Copy this:", text); });
+}
+
+function toast(text) { const t = $("#toast"); t.textContent = text; t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 1800); }
+
+// ------------------------------------------------------------------------------------------
+// Playback: progress bars, tap and keyboard controls, pause on hold.
+// ------------------------------------------------------------------------------------------
+const slides = SLIDES.filter(s => !s.only || s.only());
+const DURATION = 6500;
+let index = 0, elapsed = 0, paused = false, last = performance.now();
+
+document.title = `${your} ${F.year} Wrapped`;
+$("#who").textContent = F.everyone ? F.name : F.year;
+slides.forEach(() => { const d = h("div"); d.append(h("span")); $("#bars").append(d); });
+
+function go(i) {
+  index = Math.max(0, Math.min(i, slides.length - 1)); elapsed = 0; setPaused(false);
+  const s = slides[index], root = document.documentElement.style;
+  [["--a", 0], ["--b", 1], ["--c", 2]].forEach(([k, n]) => root.setProperty(k, s.colors[n]));
+  const el = $("#slide"); el.replaceChildren(); el.removeAttribute("style"); s.draw(el);
+  [...$("#bars").children].forEach((d, n) => d.firstChild.style.width = n < index ? "100%" : "0");
+  $("#hint").style.display = index === 0 ? "" : "none";
+  history.replaceState(null, "", "#" + (index + 1));
+}
+
+function tick(now) {
+  const dt = now - last; last = now;
+  const s = slides[index], length = s.duration || DURATION;
+  if (!paused && isFinite(length)) {
+    elapsed += dt;
+    $("#bars").children[index].firstChild.style.width = Math.min(100, 100 * elapsed / length) + "%";
+    if (elapsed >= length) go(index + 1);
+  } else if (!isFinite(length)) $("#bars").children[index].firstChild.style.width = "100%";
+  requestAnimationFrame(tick);
+}
+
+function setPaused(p) { paused = p; $("#stage").classList.toggle("paused", p); }
+
+let pressed = 0, holdTimer = null, held = false;
+$("#stage").addEventListener("pointerdown", (e) => {
+  if (e.target.closest(".actions")) return;
+  pressed = performance.now(); held = false;
+  holdTimer = setTimeout(() => { held = true; setPaused(true); }, 220);
+});
+$("#stage").addEventListener("pointerup", (e) => {
+  if (e.target.closest(".actions")) return;
+  clearTimeout(holdTimer);
+  if (held) { setPaused(false); return; }
+  const box = $("#stage").getBoundingClientRect();
+  go(e.clientX - box.left < box.width * 0.3 ? index - 1 : index + 1);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") go(index + 1);
+  else if (e.key === "ArrowLeft") go(index - 1);
+  else if (e.key === " ") { e.preventDefault(); setPaused(!paused); }
+  else if (e.key.toLowerCase() === "h") $("#stage").classList.toggle("clean");
+  else if (e.key.toLowerCase() === "r") go(0);
+});
+
+const fromHash = () => go((parseInt(location.hash.slice(1), 10) || 1) - 1);
+window.addEventListener("hashchange", fromHash);   // links like wrapped.html#5 open slide 5
+fromHash();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

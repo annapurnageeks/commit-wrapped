@@ -1,0 +1,19 @@
+{
+  "captions": {
+    "intro": "One of the most-used libraries on Earth had quite a year. Let's look.",
+    "commits": "Active on 183 days so far. Somebody was always shipping.",
+    "people": "From one-time fixers to people who basically live here.",
+    "lines": "Net +134,215 lines. About 121,000 of them arrived in one commit.",
+    "months": "February was the busiest month of the year.",
+    "hours": "Peak hour: 1 PM. React gets built right after lunch.",
+    "weekdays": "Midweek is for merging. Weekends are (mostly) for resting.",
+    "streak": "A full week of commits in January, and never more than 6 days off.",
+    "calendar": "November 12: a dozen DevTools dependency upgrades, one after another.",
+    "languages": "Rust came within 2 points of JavaScript. In a JavaScript library.",
+    "files": "The file where React meets the real DOM. Touched 40 times.",
+    "biggest": "June 9: the React Compiler, ported to Rust in one commit.",
+    "messages": "113 commit messages mention DevTools. It's the year's favourite word.",
+    "personality": "Commit messages average 67 characters, with tags and PR numbers. Future readers are grateful.",
+    "outro": "That was React's 2026. Now make your own."
+  }
+}
