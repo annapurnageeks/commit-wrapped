@@ -111,7 +111,8 @@ def find_repos(paths, max_depth=4):
 # ---------------------------------------------------------------------------------------------
 
 def git_config(repo, key):
-    result = subprocess.run(["git", "-C", str(repo), "config", key], capture_output=True, text=True)
+    result = subprocess.run(["git", "-C", str(repo), "config", key], capture_output=True, text=True,
+                            encoding="utf-8", errors="replace")
     return result.stdout.strip()
 
 
@@ -422,6 +423,9 @@ def render(facts, output):
 
 
 def main():
+    # Windows may print with an old code page; never crash on an emoji or someone's name.
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="Your year in code, as a story you can share.")
     parser.add_argument("paths", nargs="*", default=["."], help="repos, or folders to search for repos")
     parser.add_argument("-o", "--output", default="wrapped.html", help="where to write it (default: wrapped.html)")

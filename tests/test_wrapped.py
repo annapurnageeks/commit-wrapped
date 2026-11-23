@@ -162,6 +162,14 @@ class WrappedTest(unittest.TestCase):
         self.assertNotEqual(missing.returncode, 0)
         self.assertIn("no commits", missing.stderr)
 
+    def test_output_survives_a_non_utf8_console(self):
+        # Windows terminals and pipes may use an old code page such as cp1252
+        make_repo(self.root / "r", [("2025-01-05T12:00:00+00:00", "Ada", "add 🚀 launch", {"a.py": "x\n"})])
+        env = dict(os.environ, PYTHONIOENCODING="cp1252")
+        result = subprocess.run([sys.executable, str(ROOT / "wrapped.py"), str(self.root / "r"), "--year", "2025",
+                                 "--author", "ada", "--brief"], capture_output=True, text=True, encoding="utf-8", env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
