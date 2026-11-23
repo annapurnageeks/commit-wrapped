@@ -467,7 +467,7 @@ def main():
         return
 
     render(facts, args.output)
-    print(f"{len(commits):,} commits from {len(repos)} repos -> {args.output}")
+    print(f"{plural(len(commits), 'commit')} from {plural(len(repos), 'repo')} -> {args.output}")
     if args.open:
         webbrowser.open(Path(args.output).resolve().as_uri())
 
